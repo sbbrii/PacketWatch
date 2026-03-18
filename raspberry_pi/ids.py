@@ -9,6 +9,8 @@ from blocker import block_ip, unblock_ip
 from static_rules import check_static_rules
 
 
+LAPTOP_URL   = "http://192.168.10.2:5000/alert"
+COMMANDS_URL = "http://192.168.10.2:5000/commands"
 
 
 layer1 = joblib.load("ML_1.pkl")

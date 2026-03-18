@@ -6,7 +6,7 @@ import threading
 # ── Protected IPs — never blocked ─────────────────────────────────────────────
 PROTECTED_IPS = {
     "192.168.1.5",
-    
+    "192.168.1.55"
 }
 
 active_timers = {}
