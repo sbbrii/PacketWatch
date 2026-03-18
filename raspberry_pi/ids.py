@@ -6,19 +6,20 @@ from datetime import datetime
 import pandas as pd
 import feature_extraction
 from blocker import block_ip, unblock_ip
+from static_rules import check_static_rules
 
-LAPTOP_URL   = "http://192.168.43.105:5000/alert"
-COMMANDS_URL = "http://192.168.43.105:5000/commands"
 
-layer1 = joblib.load("/home/pi/final_model_2.pkl")
-layer2 = joblib.load("/home/pi/ml_model1.pkl")
+
+
+layer1 = joblib.load("ML_1.pkl")
+layer2 = joblib.load("ML_2_layer.pkl")
 
 feature_names = [
     'Flow Duration',
     'Flow IAT Mean',
     'Flow IAT Std',
     'Packet Length Variance',
-    'Packet Length Max',
+    'Packet Length Max',    
     'Init Fwd Win Bytes',
     'Init Bwd Win Bytes',
     'Fwd Packets/s',
@@ -72,6 +73,40 @@ def main():
     while True:
         flows = feature_extraction.extract_features()
         for meta, features in flows:
+            rule_result = check_static_rules(features)
+
+            if rule_result:
+                block_status = "permanent"
+                block_ip(meta["src_ip"], permanent=True, anomaly_score=100)
+                alert = {
+                    "timestamp":    datetime.now().isoformat(),
+                    "src_ip":       meta["src_ip"],
+                    "dst_ip":       meta["dst_ip"],
+                    "protocol":     meta["protocol"],
+                    "anomaly_score": 100,
+                    "block_status": block_status,
+                    "label":        rule_result,
+                    "features": {
+                        "Flow Duration":          float(features[0]),
+                        "Flow IAT Mean":          float(features[1]),
+                        "Flow IAT Std":           float(features[2]),
+                        "Packet Length Variance": float(features[3]),
+                        "Packet Length Max":      float(features[4]),
+                        "Init Fwd Win Bytes":     float(features[5]),
+                        "Init Bwd Win Bytes":     float(features[6]),
+                        "Fwd Packets/s":          float(features[7]),
+                        "Bwd Packet Length Mean": float(features[8]),
+                        "Packet Length Min":      float(features[9]),
+                    }
+                }
+                print(f"[STATIC] {rule_result} detected → permanent block on {meta['src_ip']}")
+                try:
+                    requests.post(LAPTOP_URL, json=alert, timeout=3)
+                except requests.exceptions.RequestException as e:
+                    print(f"[IDS] Failed to send alert: {e}")
+                continue
+
+            # ML pipeline — only reached if no static rule fired
             prediction    = layer1.predict([features])[0]
             raw_score     = layer1.decision_function([features])[0]
             anomaly_score = round(float(max(0.0, min(100.0, (-raw_score) * 200))), 1)
@@ -80,9 +115,7 @@ def main():
                 df = pd.DataFrame([features], columns=feature_names)
                 attack_type  = layer2.predict(df)[0]
                 block_status = "permanent" if anomaly_score >= 70 else "timeout"
-
                 do_block(meta["src_ip"], anomaly_score)
-
                 alert = {
                     "timestamp":     datetime.now().isoformat(),
                     "src_ip":        meta["src_ip"],
@@ -104,14 +137,11 @@ def main():
                         "Packet Length Min":      float(features[9]),
                     }
                 }
-
                 print(f"[IDS] ANOMALY! [{attack_type}] score={anomaly_score} → {block_status} block on {meta['src_ip']}")
-
                 try:
                     requests.post(LAPTOP_URL, json=alert, timeout=3)
                 except requests.exceptions.RequestException as e:
                     print(f"[IDS] Failed to send alert: {e}")
-
             else:
                 print(f"[IDS] Normal traffic from {meta['src_ip']}")
 
