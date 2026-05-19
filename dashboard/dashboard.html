@@ -1,187 +1,308 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Silent Sentinel IDS</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="alert_popup.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Silent Sentinel IDS Dashboard</title>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="alert_popup.css">
 </head>
+
 <body>
-  <div class="dashboard-grid">
+  <div class="kibana-dashboard">
     <!-- Header -->
     <header class="header">
       <div class="logo">
         <div class="logo-icon"></div>
-        <div>
-          <div class="logo-text">SILENT SENTINEL</div>
-          <div class="logo-sub">INTRUSION DETECTION SYSTEM</div>
-        </div>
-      </div>
-      <div class="header-right">
-        <div class="status-badge monitoring" id="status-badge">
-          <span class="status-dot"></span>
-          MONITORING
-        </div>
-        <div class="last-update" id="last-update">—</div>
+        <div class="logo-text">Silent Sentinel</div>
       </div>
     </header>
 
-    <!-- Metrics Row -->
-    <div class="metrics-row">
-      <div class="metric-card">
-        <div class="metric-icon" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+    <!-- Top Row Metric Cards -->
+    <div class="analysis-section">
+      <div class="analysis-card">
+        <h3>Total Alerts</h3>
+        <div id="metric-total-alerts" style="font-size:28px; font-weight:700; color:var(--text-main); margin-top:8px;">0</div>
+      </div>
+      <div class="analysis-card">
+        <h3>Attacks Detected</h3>
+        <div id="metric-attacks" style="font-size:28px; font-weight:700; color:var(--color-orange); margin-top:8px;">0</div>
+      </div>
+      <div class="analysis-card">
+        <h3>IPS Blocked</h3>
+        <div id="metric-blocked" style="font-size:28px; font-weight:700; color:var(--color-red); margin-top:8px;">0</div>
+      </div>
+      <div class="analysis-card">
+        <h3>Avg Threat Score</h3>
+        <div id="metric-threat-score" style="font-size:28px; font-weight:700; color:var(--color-blue); margin-top:8px;">0.0</div>
+      </div>
+    </div>
+
+    <!-- Top Row -->
+    <div class="top-row">
+      <div class="panel events-over-time">
+        <div class="panel-header">
+          <span class="panel-title">EVENTS OVER TIME</span>
+          
         </div>
-        <div>
-          <div class="metric-label">Total Alerts</div>
-          <div class="metric-value" id="stat-total">0</div>
+        <div class="panel-content chart-wrapper">
+          <canvas id="chart-events-time"></canvas>
         </div>
       </div>
 
-      <div class="metric-card">
-        <div class="metric-icon" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-danger)" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      <div class="panel alerts-panel">
+        <div class="panel-header">
+          <span class="panel-title">ALERTS</span>
+          
         </div>
-        <div>
-          <div class="metric-label">Attacks Detected</div>
-          <div class="metric-value" id="stat-attacks">0</div>
+        <div class="panel-content table-wrapper">
+          <table class="kibana-table" id="alerts-table">
+            <thead>
+              <tr>
+                <th>Term</th>
+                <th>Count</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
         </div>
       </div>
 
-      <div class="metric-card">
-        <div class="metric-icon" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-warning)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+      <div class="panel trends-panel">
+        <div class="panel-header">
+          <span class="panel-title">TRENDS</span>
+          
         </div>
-        <div>
-          <div class="metric-label">IPs Blocked</div>
-          <div class="metric-value" id="stat-blocked">0</div>
-        </div>
-      </div>
-
-      <div class="metric-card">
-        <div class="metric-icon" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-info)" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-        </div>
-        <div>
-          <div class="metric-label">Last Score</div>
-          <div class="metric-value" id="stat-score">—</div>
+        <div class="panel-content">
+          <ul class="trends-list" id="trends-list">
+            <!-- Populated by JS -->
+          </ul>
         </div>
       </div>
     </div>
 
-    <!-- Main Timeline -->
-    <div class="chart-container main-timeline">
-      <h2 class="chart-title">Alerts Over Time</h2>
-      <div class="chart-wrap">
-        <canvas id="chart-timeline"></canvas>
+    <!-- Middle Row (Donuts) -->
+    <div class="middle-row" id="donuts-container">
+      <div class="panel donut-panel" id="panel-attacks">
+        <div class="panel-header">
+          <span class="panel-title">ATTACKS</span>
+          
+        </div>
+        <div class="panel-content chart-wrapper">
+          <canvas id="chart-attacks"></canvas>
+        </div>
+      </div>
+
+      <div class="panel donut-panel" id="panel-severity">
+        <div class="panel-header">
+          <span class="panel-title">SEVERITY DISTRIBUTION</span>
+          
+        </div>
+        <div class="panel-content chart-wrapper">
+          <canvas id="chart-severity"></canvas>
+        </div>
+      </div>
+
+      <!-- Placeholders for missing data -->
+      <div class="panel donut-panel" id="panel-http-version" style="display: none;">
+        <div class="panel-header"><span class="panel-title">HTTP VERSION</span>
+          
+        </div>
+        <div class="panel-content chart-wrapper"><canvas id="chart-http-version"></canvas></div>
+      </div>
+      <div class="panel donut-panel" id="panel-http-methods" style="display: none;">
+        <div class="panel-header"><span class="panel-title">HTTP METHODS</span>
+          
+        </div>
+        <div class="panel-content chart-wrapper"><canvas id="chart-http-methods"></canvas></div>
+      </div>
+      <div class="panel donut-panel" id="panel-http-status" style="display: none;">
+        <div class="panel-header"><span class="panel-title">HTTP STATUS CODES</span>
+          
+        </div>
+        <div class="panel-content chart-wrapper"><canvas id="chart-http-status"></canvas></div>
+      </div>
+      <div class="panel donut-panel" id="panel-tls-version" style="display: none;">
+        <div class="panel-header"><span class="panel-title">TLS VERSION</span>
+          
+        </div>
+        <div class="panel-content chart-wrapper"><canvas id="chart-tls-version"></canvas></div>
+      </div>
+      <div class="panel donut-panel" id="panel-dns-types" style="display: none;">
+        <div class="panel-header"><span class="panel-title">DNS TYPES</span>
+          
+        </div>
+        <div class="panel-content chart-wrapper"><canvas id="chart-dns-types"></canvas></div>
       </div>
     </div>
 
-    <!-- Bottom Layout: Sidebar + Feed -->
-    <div class="bottom-layout">
-      <!-- Active Blocks Sidebar -->
-      <aside class="blocked-sidebar">
-        <h2 class="chart-title">Active Blocks</h2>
-        <div id="blocked-list" class="blocked-list">
-          <div class="empty-state">No active blocks</div>
+    <!-- Bottom Row (Tables) -->
+    <div class="bottom-row">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">TOP SOURCE IPS</span>
+          
         </div>
-      </aside>
+        <div class="panel-content table-wrapper">
+          <table class="kibana-table" id="src-ips-table">
+            <thead>
+              <tr>
+                <th>Source IP</th>
+                <th>Count</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
 
-      <!-- Alert Feed Table -->
-      <section class="alert-feed">
-        <div class="alert-feed-header">
-          <h2 class="chart-title">Alert Feed</h2>
-          <span class="refresh-label">AUTO-REFRESH 5s</span>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">TOP DESTINATION IPS</span>
+          
         </div>
-        <div class="table-wrap">
-          <div id="table-container">
-            <div class="empty-state"><p>AWAITING TRAFFIC DATA...</p></div>
-          </div>
+        <div class="panel-content table-wrapper">
+          <table class="kibana-table" id="dst-ips-table">
+            <thead>
+              <tr>
+                <th>Destination IP</th>
+                <th>Count</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
         </div>
-      </section>
+      </div>
+
+      <div class="panel" id="panel-user-agents" style="display: none;">
+        <div class="panel-header">
+          <span class="panel-title">USER-AGENTS</span>
+          
+        </div>
+        <div class="panel-content table-wrapper">
+          <table class="kibana-table" id="user-agents-table">
+            <thead>
+              <tr>
+                <th>Term</th>
+                <th>Count</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-tls-subject" style="display: none;">
+        <div class="panel-header">
+          <span class="panel-title">TLS SUBJECT</span>
+          
+        </div>
+        <div class="panel-content table-wrapper">
+          <table class="kibana-table" id="tls-subject-table">
+            <thead>
+              <tr>
+                <th>Term</th>
+                <th>Count</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
+    <!-- VERY BOTTOM OF PAGE -->
+    <div class="analysis-section" style="margin-top: 10px;">
+      <div class="analysis-card">
+        <h3>Traffic Analysis</h3>
+        <div id="traffic-analysis-content">Loading...</div>
+      </div>
+      <div class="analysis-card">
+        <h3>Security Analysis</h3>
+        <div id="security-analysis-content">Loading...</div>
+      </div>
+      <div class="analysis-card">
+        <h3>Performance Analysis</h3>
+        <div id="performance-analysis-content">Loading...</div>
+      </div>
+      <div class="analysis-card">
+        <h3>Behavioral Analysis</h3>
+        <div id="behavioral-analysis-content">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Unblock / Toast area -->
     <div id="toast"></div>
+
   </div>
 
-<!-- ── Attack Alert Backdrop + Modal ────────────────────────────────────── -->
-<div id="ap-backdrop">
-  <div id="ap-modal" role="dialog" aria-modal="true" aria-labelledby="ap-title">
-
-    <!-- Colour accent strip -->
-    <div id="ap-accent-bar"></div>
-
-    <!-- Countdown timer bar -->
-    <div id="ap-timer-bar"></div>
-
-    <!-- Close button -->
-    <button id="ap-close" aria-label="Close alert">✕</button>
-
-    <div class="ap-body">
-
-      <div class="ap-header">
-        <div class="ap-icon" aria-hidden="true">⚠</div>
-        <div class="ap-title-group">
-          <div id="ap-title">⚠ Attack Blocked</div>
-          <div class="ap-subtitle">Silent Sentinel IDS</div>
+  <!-- ── Attack Alert Backdrop + Modal ────────────────────────────────────── -->
+  <div id="ap-backdrop">
+    <div id="ap-modal" role="dialog" aria-modal="true" aria-labelledby="ap-title">
+      <div id="ap-accent-bar"></div>
+      <div id="ap-timer-bar"></div>
+      <button id="ap-close" aria-label="Close alert"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+      <div class="ap-body">
+        <div class="ap-header">
+          <div class="ap-icon" aria-hidden="true"><i data-lucide="shield-alert"></i></div>
+          <div class="ap-title-group">
+            <div id="ap-title" style="display:flex;align-items:center;gap:6px;"><i data-lucide="shield-alert" style="width:18px;height:18px;"></i> Attack Blocked</div>
+            <div class="ap-subtitle">Silent Sentinel IDS</div>
+          </div>
         </div>
-      </div>
-
-      <div class="ap-divider"></div>
-
-      <div id="ap-message">An anomaly was detected and blocked.</div>
-
-      <div class="ap-fields">
-
-        <div class="ap-field">
-          <span class="ap-field-label">Attacker IP</span>
-          <span class="ap-field-value" id="ap-ip">—</span>
-        </div>
-
-        <div class="ap-field">
-          <span class="ap-field-label">Attack Type</span>
-          <span class="ap-field-value" id="ap-attack-type">—</span>
-        </div>
-
-        <div class="ap-field">
-          <span class="ap-field-label">Severity</span>
-          <div class="ap-score-row">
-            <span class="ap-score-num ap-score-high" id="ap-score-num">—</span>
-            <div class="ap-score-bar-track">
-              <div class="ap-score-bar-fill" id="ap-score-bar-fill" style="width:0%"></div>
+        <div class="ap-divider"></div>
+        <div id="ap-message">An anomaly was detected and blocked.</div>
+        <div class="ap-fields">
+          <div class="ap-field">
+            <span class="ap-field-label">Attacker IP</span>
+            <span class="ap-field-value" id="ap-ip">—</span>
+          </div>
+          <div class="ap-field">
+            <span class="ap-field-label">Attack Type</span>
+            <span class="ap-field-value" id="ap-attack-type">—</span>
+          </div>
+          <div class="ap-field">
+            <span class="ap-field-label">Severity</span>
+            <div class="ap-score-row">
+              <span class="ap-score-num ap-score-high" id="ap-score-num">—</span>
+              <div class="ap-score-bar-track">
+                <div class="ap-score-bar-fill" id="ap-score-bar-fill" style="width:0%"></div>
+              </div>
             </div>
           </div>
+          <div class="ap-field">
+            <span class="ap-field-label">Block Type</span>
+            <span class="ap-badge ap-badge-perm" id="ap-block-badge"><i data-lucide="lock" style="width:12px;height:12px;margin-right:4px;"></i> PERMANENT</span>
+          </div>
+          <div class="ap-field">
+            <span class="ap-field-label">Detected At</span>
+            <span class="ap-field-value" id="ap-timestamp">—</span>
+          </div>
         </div>
-
-        <div class="ap-field">
-          <span class="ap-field-label">Block Type</span>
-          <span class="ap-badge ap-badge-perm" id="ap-block-badge">● PERMANENT</span>
+        <div class="ap-footer">
+          <span class="ap-dismiss-hint">Auto-dismiss 6s</span>
+          <button id="ap-dismiss-btn">Dismiss</button>
+          <button id="ap-ack-btn">Acknowledge</button>
         </div>
-
-        <div class="ap-field">
-          <span class="ap-field-label">Detected At</span>
-          <span class="ap-field-value" id="ap-timestamp">—</span>
-        </div>
-
       </div>
-
-      <div class="ap-footer">
-        <span class="ap-dismiss-hint">Auto-dismiss 6s</span>
-        <button id="ap-dismiss-btn">Dismiss</button>
-        <button id="ap-ack-btn">Acknowledge</button>
-      </div>
-
     </div>
   </div>
-</div>
-<!-- ── End Alert Modal ───────────────────────────────────────────────────── -->
+  <!-- ── End Alert Modal ───────────────────────────────────────────────────── -->
 
-<script src="script.js"></script>
-<script src="alert_popup.js"></script>
+  <script src="script.js"></script>
+  <script src="alert_popup.js"></script>
+  <script>lucide.createIcons();</script>
 </body>
+
 </html>

@@ -1,7 +1,19 @@
 // ── State ─────────────────────────────────────────────────────────────────────
 let alerts = [];
 let blockedIPs = new Set();
-let timelineChart = null;
+let charts = {};
+
+const colors = {
+  green: '#8EC27B',
+  orange: '#EBB15B',
+  blue: '#6DB8D6',
+  yellow: '#D8A543',
+  red: '#D9534F',
+  purple: '#B276B2',
+  grey: '#9E9E9E'
+};
+
+const chartColors = [colors.green, colors.orange, colors.blue, colors.yellow, colors.red, colors.purple];
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────
 async function fetchAlerts() {
@@ -10,8 +22,6 @@ async function fetchAlerts() {
     if (!res.ok) return;
     alerts = await res.json();
     render();
-    document.getElementById('last-update').textContent =
-      'UPDATED ' + new Date().toLocaleTimeString();
   } catch (e) {
     console.error('Fetch failed:', e);
   }
@@ -19,60 +29,101 @@ async function fetchAlerts() {
 
 // ── Render all ────────────────────────────────────────────────────────────────
 function render() {
-  const attacks   = alerts.filter(a => a.attack_type !== 'Benign').length;
-  const blocked   = alerts.filter(a => a.block_status && a.block_status !== 'none').length;
-  const lastScore = alerts.length ? alerts[alerts.length - 1].anomaly_score : null;
+  updateBlockedIPs();
+  
+  renderAnalysis();
+  renderTimeline();
+  renderDonuts();
+  renderTables();
+  renderTrends();
+  setTimeout(() => { if (window.lucide) window.lucide.createIcons(); }, 10);
+}
 
-  document.getElementById('stat-total').textContent   = alerts.length;
-  document.getElementById('stat-attacks').textContent = attacks;
-  document.getElementById('stat-blocked').textContent = blocked;
-  document.getElementById('stat-score').textContent   = lastScore !== null ? lastScore.toFixed(1) : '—';
-
+function updateBlockedIPs() {
   blockedIPs = new Set(
     alerts
       .filter(a => a.block_status === 'permanent' || a.block_status === 'temporary')
       .map(a => a.src_ip)
   );
-
-  renderSidebar();
-  renderTimeline();
-  renderTable();
 }
 
-// ── Sidebar: blocked IPs ──────────────────────────────────────────────────────
-function renderSidebar() {
-  const container = document.getElementById('blocked-list');
-  if (blockedIPs.size === 0) {
-    container.innerHTML = '<span class="no-blocks">NO ACTIVE BLOCKS</span>';
-    return;
+// ── Analysis Module ───────────────────────────────────────────────────────────
+function renderAnalysis() {
+  if (alerts.length === 0) return;
+  
+  // Traffic Analysis
+  const total = alerts.length;
+  const half = Math.floor(alerts.length / 2);
+  const firstHalf = alerts.slice(0, half);
+  const secondHalf = alerts.slice(half);
+  
+  let growth = 0;
+  if (firstHalf.length > 0) {
+    growth = ((secondHalf.length - firstHalf.length) / firstHalf.length) * 100;
   }
+  
+  document.getElementById('traffic-analysis-content').innerHTML = `
+    <div style="margin-bottom: 4px;">Total Events: <strong style="color:var(--text-main);">${total}</strong></div>
+    <div style="margin-bottom: 4px;">Event Growth: <strong style="color:${growth >= 0 ? colors.red : colors.green};">${growth > 0 ? '+' : ''}${growth.toFixed(1)}%</strong></div>
+    <div>Time Span: <strong style="color:var(--text-main);">Last 24h</strong></div>
+  `;
+  
+  // Security Analysis
+  const attackCounts = {};
+  alerts.forEach(a => {
+    attackCounts[a.attack_type || 'Unknown'] = (attackCounts[a.attack_type || 'Unknown'] || 0) + 1;
+  });
+  let topAttack = '';
+  let maxCount = 0;
+  for (const [type, count] of Object.entries(attackCounts)) {
+    if (count > maxCount) { maxCount = count; topAttack = type; }
+  }
+  
+  document.getElementById('security-analysis-content').innerHTML = `
+    <div style="margin-bottom: 4px;">Most Frequent: <strong style="color:var(--color-orange);">${topAttack} (${maxCount})</strong></div>
+    <div style="margin-bottom: 4px;">Unique Sources: <strong style="color:var(--text-main);">${new Set(alerts.map(a=>a.src_ip)).size}</strong></div>
+    <div>Unique Targets: <strong style="color:var(--text-main);">${new Set(alerts.map(a=>a.dst_ip)).size}</strong></div>
+  `;
+  
+  // Performance Analysis
+  const blockedCount = alerts.filter(a => a.block_status && a.block_status !== 'none' && a.block_status !== 'unblocked').length;
+  const avgScore = alerts.reduce((sum, a) => sum + (a.anomaly_score || 0), 0) / (alerts.length || 1);
+  
+  document.getElementById('performance-analysis-content').innerHTML = `
+    <div style="margin-bottom: 4px;">Total Blocked: <strong style="color:var(--color-red);">${blockedCount}</strong></div>
+    <div style="margin-bottom: 4px;">Avg Anomaly Score: <strong style="color:var(--text-main);">${avgScore.toFixed(1)}</strong></div>
+    <div>System Status: <strong style="color:var(--color-green);">Online</strong></div>
+  `;
 
-  container.innerHTML = [...blockedIPs].map(ip => {
-    const latest    = [...alerts].reverse().find(a => a.src_ip === ip);
-    const blockType = latest ? latest.block_status : 'temporary';
-    const attack    = latest ? (latest.attack_type || '—') : '—';
-    const badgeCls  = blockType === 'permanent' ? 'badge-perm' : 'badge-temp';
-    const badgeTxt  = blockType.toUpperCase();
-
-    return `<div class="block-card">
-      <div class="block-ip">${ip}</div>
-      <div class="block-meta">
-        <span class="block-attack">${attack}</span>
-        <span class="block-type-badge ${badgeCls}">${badgeTxt}</span>
-      </div>
-      <button class="unblock-btn" onclick="unblockIP('${ip}')">UNBLOCK</button>
-    </div>`;
-  }).join('');
+  // Behavioral Analysis
+  const highRisk = alerts.filter(a => a.anomaly_score > 80).length;
+  
+  document.getElementById('behavioral-analysis-content').innerHTML = `
+    <div style="margin-bottom: 4px;">High Risk Events: <strong style="color:var(--color-red);">${highRisk}</strong></div>
+    <div style="margin-bottom: 4px;">Anomalous Patterns: <strong style="color:var(--text-main);">Detected</strong></div>
+    <div>Activity: <strong style="color:var(--color-orange);">Spiking</strong></div>
+  `;
+  
+  // Top Row Metrics
+  document.getElementById('metric-total-alerts').textContent = total;
+  
+  const attacksCount = alerts.filter(a => {
+    const t = (a.attack_type || '').toLowerCase();
+    return t && t !== 'unknown' && t !== 'benign';
+  }).length;
+  document.getElementById('metric-attacks').textContent = attacksCount;
+  
+  document.getElementById('metric-blocked').textContent = blockedIPs.size;
+  document.getElementById('metric-threat-score').textContent = avgScore.toFixed(1);
 }
 
 // ── Timeline chart ────────────────────────────────────────────────────────────
 function renderTimeline() {
-  const buckets = 20;
-  const bucketMs = 60 * 1000;
+  const buckets = 30;
+  const bucketMs = 5 * 60 * 1000; // 5 mins per bucket
   const now = Date.now();
   const labels = [];
-  const data = Array(buckets).fill(0);
-
+  
   for (let i = buckets - 1; i >= 0; i--) {
     const t = new Date(now - i * bucketMs);
     labels.push(
@@ -81,148 +132,195 @@ function renderTimeline() {
     );
   }
 
-  alerts.forEach(a => {
-    if (!a.timestamp) return;
-    const ts  = new Date(a.timestamp).getTime();
-    const ago = now - ts;
-    if (ago < 0 || ago > buckets * bucketMs) return;
-    const idx = buckets - 1 - Math.floor(ago / bucketMs);
-    if (idx >= 0 && idx < buckets) data[idx]++;
+  const types = [...new Set(alerts.map(a => a.attack_type || 'Unknown'))];
+  const datasets = types.map((type, idx) => {
+    const data = Array(buckets).fill(0);
+    alerts.forEach(a => {
+      if ((a.attack_type || 'Unknown') !== type) return;
+      if (!a.timestamp) return;
+      const ts = new Date(a.timestamp).getTime();
+      const ago = now - ts;
+      if (ago < 0 || ago > buckets * bucketMs) return;
+      const bucketIdx = buckets - 1 - Math.floor(ago / bucketMs);
+      if (bucketIdx >= 0 && bucketIdx < buckets) data[bucketIdx]++;
+    });
+    return {
+      label: type,
+      data: data,
+      borderColor: chartColors[idx % chartColors.length],
+      backgroundColor: chartColors[idx % chartColors.length] + '33',
+      borderWidth: 1.5,
+      pointRadius: 0,
+      tension: 0.2,
+      fill: true
+    };
   });
 
-  const ctx = document.getElementById('chart-timeline').getContext('2d');
-
-  if (timelineChart) {
-    timelineChart.data.labels = labels;
-    timelineChart.data.datasets[0].data = data;
-    timelineChart.update('none');
+  const ctx = document.getElementById('chart-events-time').getContext('2d');
+  
+  if (charts.timeline) {
+    charts.timeline.data.labels = labels;
+    charts.timeline.data.datasets = datasets;
+    charts.timeline.update('none');
     return;
   }
+  
+  Chart.defaults.color = '#9E9E9E';
+  Chart.defaults.font.family = 'Inter';
 
-  timelineChart = new Chart(ctx, {
+  charts.timeline = new Chart(ctx, {
     type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: { boxWidth: 10, usePointStyle: true, color: '#E0E0E0' }
+        },
+        tooltip: { mode: 'index', intersect: false }
+      },
+      scales: {
+        x: { grid: { color: '#3A3A40' }, ticks: { maxTicksLimit: 10 } },
+        y: { beginAtZero: true, grid: { color: '#3A3A40' }, ticks: { stepSize: 1 } }
+      }
+    }
+  });
+}
+
+// ── Donuts ────────────────────────────────────────────────────────────────────
+function createDonut(id, labels, dataVals, bgColors) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const ctx = el.getContext('2d');
+  
+  if (charts[id]) {
+    charts[id].data.labels = labels;
+    charts[id].data.datasets[0].data = dataVals;
+    charts[id].update('none');
+    return;
+  }
+  charts[id] = new Chart(ctx, {
+    type: 'doughnut',
     data: {
-      labels,
+      labels: labels,
       datasets: [{
-        data,
-        fill: true,
-        borderColor: '#88c0d0',
-        backgroundColor: 'rgba(136, 192, 208, 0.12)',
-        borderWidth: 1.5,
-        pointRadius: 0,
-        tension: 0.4,
+        data: dataVals,
+        backgroundColor: bgColors || chartColors,
+        borderWidth: 0
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       animation: false,
+      cutout: '65%',
       plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: { label: ctx => `${ctx.parsed.y} alerts` },
-          backgroundColor: 'rgba(59, 66, 82, 0.95)',
-          borderColor: '#434c5e',
-          borderWidth: 1,
-          titleColor: '#d8dee9',
-          bodyColor: '#eceff4',
-          titleFont: { family: 'JetBrains Mono', size: 10 },
-          bodyFont:  { family: 'JetBrains Mono', size: 12 },
-        }
-      },
-      scales: {
-        x: {
-          ticks: { color: '#d8dee9', font: { family: 'JetBrains Mono', size: 10 }, maxTicksLimit: 6 },
-          grid:  { color: 'rgba(67, 76, 94, 0.6)' },
-        },
-        y: {
-          beginAtZero: true,
-          ticks: { color: '#d8dee9', font: { family: 'JetBrains Mono', size: 10 }, stepSize: 1 },
-          grid:  { color: 'rgba(67, 76, 94, 0.6)' },
+        legend: {
+          display: true,
+          position: 'left',
+          labels: { boxWidth: 10, usePointStyle: true, color: '#E0E0E0', font: {size: 11} }
         }
       }
     }
   });
 }
 
-// ── Alert table ───────────────────────────────────────────────────────────────
-function renderTable() {
-  const reversed = [...alerts].reverse();
+function renderDonuts() {
+  const attackCounts = {};
+  alerts.forEach(a => {
+    const type = a.attack_type || a.label || 'Unknown';
+    attackCounts[type] = (attackCounts[type] || 0) + 1;
+  });
+  createDonut('chart-attacks', Object.keys(attackCounts), Object.values(attackCounts));
 
-  if (reversed.length === 0) {
-    document.getElementById('table-container').innerHTML =
-      '<div class="empty-state"><p>AWAITING TRAFFIC DATA...</p></div>';
+  const sevCounts = { 'Low (<40)': 0, 'Medium (40-70)': 0, 'High (>70)': 0 };
+  alerts.forEach(a => {
+    const s = a.anomaly_score || 0;
+    if (s < 40) sevCounts['Low (<40)']++;
+    else if (s < 70) sevCounts['Medium (40-70)']++;
+    else sevCounts['High (>70)']++;
+  });
+  createDonut('chart-severity', Object.keys(sevCounts), Object.values(sevCounts), [colors.blue, colors.yellow, colors.red]);
+}
+
+// ── Tables & Trends ───────────────────────────────────────────────────────────
+function renderTables() {
+  const attackCounts = {};
+  alerts.forEach(a => { attackCounts[a.attack_type || 'Unknown'] = (attackCounts[a.attack_type || 'Unknown'] || 0) + 1; });
+  const sortedAttacks = Object.entries(attackCounts).sort((a,b)=>b[1]-a[1]);
+  document.querySelector('#alerts-table tbody').innerHTML = sortedAttacks.map(k => 
+    `<tr><td>${k[0]}</td><td>${k[1]}</td><td><button class="action-btn" title="Inspect"><i data-lucide="search" style="width:16px;height:16px;"></i></button> <button class="action-btn action-block" style="color:var(--color-red);" title="Block"><i data-lucide="shield-ban" style="width:16px;height:16px;"></i></button></td></tr>`
+  ).join('');
+
+  const srcIpCounts = {};
+  alerts.forEach(a => { srcIpCounts[a.src_ip || 'Unknown'] = (srcIpCounts[a.src_ip || 'Unknown'] || 0) + 1; });
+  const sortedSrcIps = Object.entries(srcIpCounts).sort((a,b)=>b[1]-a[1]).slice(0, 10);
+  document.querySelector('#src-ips-table tbody').innerHTML = sortedSrcIps.map(k => {
+    const ip = k[0];
+    const isBlocked = blockedIPs.has(ip);
+    const actionHtml = isBlocked ? `<button class="unblock-btn" onclick="unblockIP('${ip}')"><i data-lucide="unlock" style="width:14px;height:14px;"></i> UNBLOCK</button>` : `<button class="action-btn action-block" style="color:var(--color-red);" title="Block"><i data-lucide="shield-ban" style="width:16px;height:16px;"></i></button>`;
+    return `<tr><td>${ip}</td><td>${k[1]}</td><td><button class="action-btn" title="Inspect"><i data-lucide="search" style="width:16px;height:16px;"></i></button> ${actionHtml}</td></tr>`;
+  }).join('');
+  
+  const dstIpCounts = {};
+  alerts.forEach(a => { dstIpCounts[a.dst_ip || 'Unknown'] = (dstIpCounts[a.dst_ip || 'Unknown'] || 0) + 1; });
+  const sortedDstIps = Object.entries(dstIpCounts).sort((a,b)=>b[1]-a[1]).slice(0, 10);
+  document.querySelector('#dst-ips-table tbody').innerHTML = sortedDstIps.map(k => {
+    return `<tr><td>${k[0]}</td><td>${k[1]}</td><td><button class="action-btn" title="Inspect"><i data-lucide="search" style="width:16px;height:16px;"></i></button></td></tr>`;
+  }).join('');
+}
+
+function renderTrends() {
+  const trendsList = document.getElementById('trends-list');
+  if (alerts.length < 2) {
+    trendsList.innerHTML = '<li style="color:var(--text-muted);">Need more data...</li>';
     return;
   }
+  
+  const half = Math.floor(alerts.length / 2);
+  const firstHalf = alerts.slice(0, half);
+  const secondHalf = alerts.slice(half);
+  
+  function getTrend(filterFn) {
+    const c1 = firstHalf.filter(filterFn).length;
+    const c2 = secondHalf.filter(filterFn).length;
+    if (c1 === 0 && c2 === 0) return { val: 0, text: '0.00%' };
+    if (c1 === 0) return { val: 100, text: '+100.00%' };
+    const pct = ((c2 - c1) / c1) * 100;
+    return { val: pct, text: (pct > 0 ? '+' : '') + pct.toFixed(2) + '%' };
+  }
 
-  const rows = reversed.map(a => {
-    const score = (a.anomaly_score !== null && a.anomaly_score !== undefined)
-                  ? Number(a.anomaly_score) : null;
+  const ddosTrend = getTrend(a => (a.attack_type || '').includes('DDoS'));
+  const scanTrend = getTrend(a => (a.attack_type || '').includes('Scan') || (a.label || '').includes('SCAN'));
+  const webTrend = getTrend(a => (a.label || '').includes('WEB'));
+  const totalTrend = getTrend(()=>true);
 
-    const scoreHTML = score !== null
-      ? `<div class="score-wrap">
-           <span>${score.toFixed(1)}</span>
-           <div class="score-bar-bg">
-             <div class="score-bar-fill"
-                  style="width:${score}%;
-                         background:${score >= 70 ? 'var(--danger)' : score >= 40 ? 'var(--warn)' : 'var(--ok)'}">
-             </div>
-           </div>
-         </div>`
-      : '<span style="color:var(--text-dim)">—</span>';
+  const items = [
+    { label: 'DDoS Activity', trend: ddosTrend, color: colors.orange },
+    { label: 'Port Scans', trend: scanTrend, color: colors.blue },
+    { label: 'Web Attacks', trend: webTrend, color: colors.red },
+    { label: 'Total Volume', trend: totalTrend, color: colors.green }
+  ];
 
-    const blockClass = a.block_status === 'permanent' ? 'status-permanent'
-                     : a.block_status === 'temporary'  ? 'status-temporary'
-                     : 'status-none';
-    const blockText  = a.block_status ? a.block_status.toUpperCase() : 'NONE';
-
-    const proto = a.protocol === 6  ? 'TCP'
-                : a.protocol === 17 ? 'UDP'
-                : a.protocol === 1  ? 'ICMP'
-                : (a.protocol ?? '—');
-
-    const ts = a.timestamp ? a.timestamp.replace('T', ' ').slice(0, 19) : '—';
-
-    return `<tr>
-      <td class="td-time">${ts}</td>
-      <td class="td-ip">${a.src_ip || '—'}</td>
-      <td>${a.dst_ip || '—'}</td>
-      <td>${proto}</td>
-      <td>${badgeHTML(a.attack_type)}</td>
-      <td>${scoreHTML}</td>
-      <td class="${blockClass}">${blockText}</td>
-    </tr>`;
+  trendsList.innerHTML = items.map(item => {
+    const isUp = item.trend.val > 0;
+    const isDown = item.trend.val < 0;
+    const cls = isUp ? 'trend-down' : (isDown ? 'trend-up' : '');
+    const icon = isUp ? '<i data-lucide="trending-up" style="width:14px;height:14px;"></i>' : (isDown ? '<i data-lucide="trending-down" style="width:14px;height:14px;"></i>' : '<i data-lucide="minus" style="width:14px;height:14px;"></i>');
+    return `<li style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 12px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="trend-dot" style="background-color: ${item.color}"></span>
+        <span style="color:var(--text-muted);">${item.label}</span>
+      </div>
+      <span class="${cls}" style="font-family:var(--font-mono); font-size:12px; display:flex; align-items:center; gap:4px;">${icon} <span>${item.trend.text}</span></span>
+    </li>`;
   }).join('');
-
-  document.getElementById('table-container').innerHTML = `
-    <table>
-      <thead>
-        <tr>
-          <th>Timestamp</th>
-          <th>Src IP</th>
-          <th>Dst IP</th>
-          <th>Proto</th>
-          <th>Attack Type</th>
-          <th>Anomaly Score</th>
-          <th>Block Status</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>`;
 }
 
-// ── Badge helper ──────────────────────────────────────────────────────────────
-function badgeHTML(type) {
-  if (!type) return '<span class="badge badge-default">UNKNOWN</span>';
-  const t = type.toLowerCase();
-  const cls = t.includes('ddos')                           ? 'badge-ddos'
-            : t.includes('dos')                            ? 'badge-dos'
-            : t.includes('portscan') || t.includes('port') ? 'badge-portscan'
-            : t.includes('brute')                          ? 'badge-bruteforce'
-            : t.includes('benign') || t.includes('normal') ? 'badge-benign'
-            : 'badge-default';
-  return `<span class="badge ${cls}">${type.toUpperCase()}</span>`;
-}
 
 // ── Unblock ───────────────────────────────────────────────────────────────────
 async function unblockIP(ip) {
@@ -236,7 +334,7 @@ async function unblockIP(ip) {
     if (data.status === 'queued' || data.status === 'already_queued') {
       showToast(`UNBLOCK QUEUED → ${ip}`);
       blockedIPs.delete(ip);
-      renderSidebar();
+      render();
     }
   } catch (e) {
     showToast('ERROR: Could not reach server');
