@@ -55,7 +55,7 @@
     const onMs   = 480;
     const offMs  = 280;
     const freq   = 880;   // Hz — sharp alarm tone
-    const vol    = 0.80;
+    const vol    = 0.20;
 
     const master = ctx.createGain();
     master.gain.setValueAtTime(vol, ctx.currentTime);
@@ -117,7 +117,7 @@
     const severity   = isHigh ? 'high' : isMedium ? 'medium' : 'low';
 
     // ── Populate title & message ──
-    const defaultTitle = '⚠ Attack Blocked';
+    const defaultTitle = 'ATTACK BLOCKED';
     const defaultMsg   = cfg.attack_type
       ? `A ${cfg.attack_type} attack was detected and blocked by Silent Sentinel.`
       : 'An anomaly was detected and blocked by Silent Sentinel IDS.';
@@ -146,16 +146,16 @@
     if (scoreBarEl) {
       const pct = score !== null ? Math.min(score, 100) : 0;
       scoreBarEl.style.width      = pct + '%';
-      scoreBarEl.style.background = isHigh   ? 'var(--ap-red)'
-                                  : isMedium ? 'var(--ap-orange)'
-                                  : 'rgba(255,255,255,0.35)';
+      scoreBarEl.style.background = isHigh   ? 'var(--color-red)'
+                                  : isMedium ? 'var(--color-orange)'
+                                  : 'var(--color-green)';
     }
 
     // ── Block badge ──
     const blockEl = $('ap-block-badge');
     if (blockEl) {
       const isPerm       = (cfg.block_status || '').toLowerCase() === 'permanent';
-      blockEl.textContent = isPerm ? '● PERMANENT' : '● TEMPORARY';
+      blockEl.textContent = isPerm ? 'PERMANENT' : 'TEMPORARY';
       blockEl.className   = 'ap-badge ' + (isPerm ? 'ap-badge-perm' : 'ap-badge-temp');
     }
 
@@ -173,7 +173,9 @@
     const backdrop = $('ap-backdrop');
     if (!modal || !backdrop) { _isOpen = false; return; }
 
-    modal.className = severity === 'medium' ? 'ap-severity-medium' : '';
+    modal.className = severity === 'high' ? 'ap-severity-high'
+                    : severity === 'medium' ? 'ap-severity-medium'
+                    : 'ap-severity-low';
 
     // ── Reveal backdrop ──
     backdrop.classList.add('ap-visible');

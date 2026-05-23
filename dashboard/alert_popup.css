@@ -1,14 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════════
    alert_popup.css  —  Silent Sentinel IDS  · Minimal SOC Alert Modal
-   ──────────────────────────────────────────────────────────────────────
-   Design principles:
-     • Dark, low-contrast surfaces — #0e0e10 base, #161618 card
-     • Thin 1px borders — #2a2a2e
-     • Muted red #c0392b used sparingly for high-severity values only
-     • Clean Rajdhani / Inter sans-serif, no monospace except values
-     • Soft shadow only — no blur on card, no glow, no animations
-     • Single animation: opacity fade-in on backdrop
-   ══════════════════════════════════════════════════════════════════════ */
+   ────────────────────────────────────────────────────────────────────── */
 
 /* ── Backdrop ─────────────────────────────────────────────────────── */
 #ap-backdrop {
@@ -19,8 +11,7 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: rgba(0, 0, 0, 0.52);
-
+  background: rgba(0, 0, 0, 0.4);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.20s ease;
@@ -35,42 +26,43 @@
 #ap-modal {
   width: 100%;
   max-width: 380px;
-  background: #161618;
-  border: 1px solid #2a2a2e;
-  border-radius: 10px;
-  box-shadow:
-    0 4px 6px rgba(0, 0, 0, 0.30),
-    0 12px 28px rgba(0, 0, 0, 0.40);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   overflow: hidden;
   position: relative;
-
-  /* Fade-in only — no scale, no shake */
   opacity: 0;
   transition: opacity 0.22s ease;
+  font-family: var(--font-main);
 }
 
 #ap-backdrop.ap-visible #ap-modal {
   opacity: 1;
 }
 
-/* ── Top accent line (1px, muted) ─────────────────────────────────── */
+/* ── Top accent line ──────────────────────────────────────────────── */
 #ap-accent-bar {
   height: 2px;
-  background: #7a1a1a;   /* dark muted red — not bright */
+  background: var(--color-red);
 }
 
 #ap-modal.ap-severity-medium #ap-accent-bar {
-  background: #7a4d1a;   /* dark muted amber */
+  background: var(--color-orange);
 }
 
-/* ── Timer bar (bottom edge, auto-dismiss) ────────────────────────── */
+#ap-modal.ap-severity-low #ap-accent-bar {
+  background: var(--color-green);
+}
+
+/* ── Timer bar ────────────────────────────────────────────────────── */
 #ap-timer-bar {
   position: absolute;
   bottom: 0;
   left: 0;
   width: 100%;
   height: 2px;
-  background: #3a3a40;
+  background: var(--border-color);
   transform-origin: left;
   transform: scaleX(1);
 }
@@ -84,21 +76,19 @@
   height: 24px;
   border: none;
   background: transparent;
-  color: #666;
-  font-size: 14px;
+  color: var(--text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  transition: background 0.15s ease, color 0.15s ease;
-  line-height: 1;
+  transition: all 0.2s ease;
   padding: 0;
 }
 
 #ap-close:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #aaa;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
 }
 
 /* ── Body padding ─────────────────────────────────────────────────── */
@@ -112,53 +102,57 @@
   align-items: center;
   gap: 10px;
   margin-bottom: 14px;
-  padding-right: 28px;   /* clear close button */
+  padding-right: 28px;
 }
 
 .ap-icon {
-  font-size: 15px;
-  color: #b03030;
-  flex-shrink: 0;
-  line-height: 1;
-  /* No animation */
+  color: var(--color-red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #ap-modal.ap-severity-medium .ap-icon {
-  color: #b06030;
+  color: var(--color-orange);
+}
+
+#ap-modal.ap-severity-low .ap-icon {
+  color: var(--color-green);
 }
 
 /* Title */
 #ap-title {
-  font-family: 'Rajdhani', 'Segoe UI', sans-serif;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #d8d8d8;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .ap-title-group { flex: 1; }
 
 .ap-subtitle {
-  font-family: 'Rajdhani', 'Segoe UI', sans-serif;
   font-size: 10px;
-  color: #555;
+  color: var(--text-muted);
   letter-spacing: 0.3px;
-  margin-top: 1px;
+  margin-top: 2px;
 }
 
 /* ── Divider ──────────────────────────────────────────────────────── */
 .ap-divider {
   height: 1px;
-  background: #232325;
+  background: var(--border-color);
   margin-bottom: 12px;
 }
 
 /* ── Short message ────────────────────────────────────────────────── */
 #ap-message {
-  font-family: 'Rajdhani', 'Segoe UI', sans-serif;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 400;
-  color: #888;
+  color: var(--text-muted);
   line-height: 1.45;
   margin-bottom: 14px;
 }
@@ -167,50 +161,40 @@
 .ap-fields {
   display: flex;
   flex-direction: column;
-  gap: 1px;                /* hairline between rows */
   margin-bottom: 16px;
-  border: 1px solid #232325;
-  border-radius: 6px;
-  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-panel);
 }
 
 .ap-field {
   display: flex;
   align-items: center;
-  gap: 0;
-  padding: 7px 10px;
-  background: #111113;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-color);
 }
 
-.ap-field:nth-child(even) {
-  background: #131315;
+.ap-field:last-child {
+  border-bottom: none;
 }
 
-/* Label — medium weight, small, muted */
+/* Label */
 .ap-field-label {
-  font-family: 'Rajdhani', 'Segoe UI', sans-serif;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.4px;
-  color: #555;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
   text-transform: uppercase;
   min-width: 96px;
   flex-shrink: 0;
 }
 
-/* Value — normal weight */
+/* Value */
 .ap-field-value {
-  font-family: 'Rajdhani', 'Segoe UI', sans-serif;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 400;
-  color: #c8c8c8;
+  color: var(--text-main);
   word-break: break-all;
-}
-
-/* Critical value highlight — muted red only for high severity */
-.ap-field-value.ap-critical {
-  color: #c0392b;
-  font-weight: 500;
 }
 
 /* ── Severity score row ────────────────────────────────────────────── */
@@ -222,55 +206,55 @@
 }
 
 .ap-score-num {
-  font-family: 'Rajdhani', 'Segoe UI', sans-serif;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
-  min-width: 34px;
-  color: #c8c8c8;
+  min-width: 30px;
+  color: var(--text-main);
 }
 
-.ap-score-num.ap-score-high   { color: #c0392b; }
-.ap-score-num.ap-score-medium { color: #b06030; }
-.ap-score-num.ap-score-low    { color: #7a7a7a; }
+.ap-score-num.ap-score-high   { color: var(--color-red); }
+.ap-score-num.ap-score-medium { color: var(--color-orange); }
+.ap-score-num.ap-score-low    { color: var(--color-green); }
 
 /* Thin progress bar */
 .ap-score-bar-track {
   flex: 1;
-  height: 3px;
-  background: #252527;
-  border-radius: 99px;
+  height: 4px;
+  background: var(--bg-dark);
+  border-radius: 2px;
   overflow: hidden;
 }
 
 .ap-score-bar-fill {
   height: 100%;
-  border-radius: 99px;
+  border-radius: 2px;
   transition: width 0.4s ease;
 }
 
 /* ── Block type badge ─────────────────────────────────────────────── */
 .ap-badge {
-  display: inline-block;
-  padding: 1px 7px;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
   border-radius: 4px;
-  border: 1px solid;
-  font-family: 'Rajdhani', 'Segoe UI', sans-serif;
+  border: 1px solid var(--border-color);
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.5px;
   text-transform: uppercase;
+  background: transparent;
 }
 
 .ap-badge-perm {
-  color: #b03030;
-  border-color: #4a1a1a;
-  background: #1e1212;
+  color: var(--color-red);
+  border-color: rgba(217, 83, 79, 0.3);
+  background: rgba(217, 83, 79, 0.1);
 }
 
 .ap-badge-temp {
-  color: #9a7030;
-  border-color: #3a2a0a;
-  background: #1a1610;
+  color: var(--color-orange);
+  border-color: rgba(235, 177, 91, 0.3);
+  background: rgba(235, 177, 91, 0.1);
 }
 
 /* ── Footer ───────────────────────────────────────────────────────── */
@@ -283,68 +267,29 @@
 
 .ap-dismiss-hint {
   margin-right: auto;
-  font-family: 'Rajdhani', 'Segoe UI', sans-serif;
   font-size: 10px;
-  color: #3a3a3e;
+  color: var(--text-muted);
   letter-spacing: 0.3px;
 }
 
-/* Dismiss — secondary, very subtle */
-#ap-dismiss-btn {
-  padding: 5px 14px;
-  border-radius: 6px;
-  border: 1px solid #2e2e32;
+/* Buttons */
+#ap-dismiss-btn, #ap-ack-btn {
   background: transparent;
-  color: #666;
-  font-family: 'Rajdhani', 'Segoe UI', sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.3px;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
   cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+  font-family: var(--font-main);
 }
 
-#ap-dismiss-btn:hover {
-  border-color: #484850;
-  color: #999;
-}
-
-/* Acknowledge — primary outline using muted red */
-#ap-ack-btn {
-  padding: 5px 14px;
-  border-radius: 6px;
-  border: 1px solid #5a1e1e;
-  background: transparent;
-  color: #c0392b;
-  font-family: 'Rajdhani', 'Segoe UI', sans-serif;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-#ap-ack-btn:hover {
-  background: rgba(192, 57, 43, 0.10);
-  border-color: #8a2a2a;
-}
-
-#ap-modal.ap-severity-medium #ap-ack-btn {
-  border-color: #5a3a10;
-  color: #b06030;
-}
-
-#ap-modal.ap-severity-medium #ap-ack-btn:hover {
-  background: rgba(176, 96, 48, 0.10);
-  border-color: #8a5a20;
-}
-
-/* ── Responsive ───────────────────────────────────────────────────── */
-@media (max-width: 420px) {
-  #ap-modal      { border-radius: 8px; }
-  .ap-body       { padding: 14px 14px 12px; }
-  .ap-field-label{ min-width: 80px; font-size: 10px; }
-  .ap-footer     { flex-wrap: wrap; }
-  #ap-ack-btn,
-  #ap-dismiss-btn{ flex: 1; text-align: center; }
+#ap-dismiss-btn:hover, #ap-ack-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: #555;
+  color: var(--text-main);
 }

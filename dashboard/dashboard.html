@@ -17,12 +17,7 @@
 <body>
   <div class="kibana-dashboard">
     <!-- Header -->
-    <header class="header">
-      <div class="logo">
-        <div class="logo-icon"></div>
-        <div class="logo-text">Silent Sentinel</div>
-      </div>
-    </header>
+    
 
     <!-- Top Row Metric Cards -->
     <div class="analysis-section">
@@ -255,9 +250,9 @@
       <button id="ap-close" aria-label="Close alert"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
       <div class="ap-body">
         <div class="ap-header">
-          <div class="ap-icon" aria-hidden="true"><i data-lucide="shield-alert"></i></div>
+          <div class="ap-icon" aria-hidden="true"><i data-lucide="shield" style="width:16px;height:16px;"></i></div>
           <div class="ap-title-group">
-            <div id="ap-title" style="display:flex;align-items:center;gap:6px;"><i data-lucide="shield-alert" style="width:18px;height:18px;"></i> Attack Blocked</div>
+            <div id="ap-title">ATTACK BLOCKED</div>
             <div class="ap-subtitle">Silent Sentinel IDS</div>
           </div>
         </div>
@@ -283,7 +278,7 @@
           </div>
           <div class="ap-field">
             <span class="ap-field-label">Block Type</span>
-            <span class="ap-badge ap-badge-perm" id="ap-block-badge"><i data-lucide="lock" style="width:12px;height:12px;margin-right:4px;"></i> PERMANENT</span>
+            <span class="ap-badge ap-badge-perm" id="ap-block-badge">PERMANENT</span>
           </div>
           <div class="ap-field">
             <span class="ap-field-label">Detected At</span>
